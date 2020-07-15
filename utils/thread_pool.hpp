@@ -8,6 +8,10 @@
 #include <memory>
 #include <algorithm>
 #include <condition_variable>
+#include <pthread.h>
+#include<iostream>
+#include<cstring>
+#include <functional>
 namespace std
 {
 //co-existing with boost::thread_group
@@ -34,6 +38,15 @@ public:
 		lock_guard<mutex> guard(m);
 		//auto_ptr<thread> new_thread(new thread(threadfunc));
 		unique_ptr<thread> new_thread(new thread(threadfunc));
+		
+		//DX: bind cpu
+		cpu_set_t cpuset;
+		CPU_ZERO(&cpuset);
+		CPU_SET(threads.size()*2,&cpuset);
+		int rc =pthread_setaffinity_np(new_thread->native_handle(),sizeof(cpu_set_t), &cpuset);
+		if (rc != 0) std::cerr << "Error calling pthread_setaffinity_np: " << rc << "\n";
+		//end bind cpu
+
 		threads.push_back(new_thread.get());
 		return new_thread.release();
 	}
@@ -150,6 +163,7 @@ private:
 	/// @brief Entry point for pool threads.
 	void main_loop()
 	{
+
 		while (running_)
 		{
 			// Wait on condition variable while the task is empty and

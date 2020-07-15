@@ -2,6 +2,9 @@
 #include <iostream>
 #include "../utils/ATimer.h"
 #include <thread>
+#include<cmath>
+#include<ctime>
+#include<cstring>
 
 Aggregator::Aggregator()
 {
@@ -23,6 +26,7 @@ Aggregator::~Aggregator()
     }
     std::cout << "Destroying Aggregator engine" << std::endl;
 }
+
 void Aggregator::setup(int block_size, int tensor_num, int thread_pool_size)
 {
     this->block_size = block_size;
@@ -32,12 +36,33 @@ void Aggregator::setup(int block_size, int tensor_num, int thread_pool_size)
     this->threadpool_context = new newplan::ThreadPool(thread_pool_size);
     std::cout << "Creating thread pool: " << thread_pool_size << std::endl;
 
+    //dx: threads warmup
+    for (int i = 0; i < thread_pool_size*12; i++)
+    {
+        this->threadpool_context->runTask([](){
+            const int tmp_size = 2<<32 / sizeof(float); // 4 GiB float
+            float* tmp = new float [tmp_size];
+            tmp[0] = 3.1415926535;
+            for (int i = 0; i!= tmp_size; i++) tmp[i] = tmp[i] + tmp[0];
+            memset(tmp, 0, tmp_size * sizeof(float));
+            delete[] tmp;
+        });
+    }
+    this->threadpool_context->waitWorkComplete();
+    std::cout<< "Threads warmup complete.\n";
+    //dx: end warm up
+
+    srand(time(NULL));
     for (int data_round = 0; data_round < 3; data_round++)
     {
         std::vector<float *> data_unit;
         for (int tensor_index = 0; tensor_index < tensor_num + 1; tensor_index++)
         {
             float *tmp_data = new float[block_size + 10];
+            /*for (int i = 0; i!=block_size; i++)
+            {
+                tmp_data[i] = float(rand()) / RAND_MAX;
+            }*/
             if (tmp_data == nullptr)
             {
                 std::cerr << "Error in malloc data" << std::endl;
@@ -154,6 +179,7 @@ void Aggregator::run()
             }
 
 //std::cout << "Merging tensor here!" << std::endl;
+#define DEBUG_AGGREGATOR
 #if defined DEBUG_AGGREGATOR
             Timer t1;
             t1.start();
@@ -163,19 +189,20 @@ void Aggregator::run()
                 {
                     int stop = start + tensor_size_ / this->thread_pool_size_;
 
-                    this->threadpool_context->runTask([this, data_round, start, stop]() {
-                        reduce(this->data_groups[data_round], this->tensor_num, start, stop);
+                    this->threadpool_context->runTask([this, data_round, start, stop, tensor_num_]() {
+                        //reduce(this->data_groups[data_round], this->tensor_num, start, stop); ///????????
+                        reduce(this->data_groups[data_round], tensor_num_, start, stop);
                     });
                 }
                 this->threadpool_context->waitWorkComplete();
             }
 #if defined DEBUG_AGGREGATOR
             t1.stop();
-            std::cout << "num tensor: " << tensor_num_ << ", size: " << tensor_size_ / 1000 << " KB, Time cost: " << t1.milliseconds() << " ms" << std::endl;
+            //std::cout << "num tensor: " << tensor_num_ << ", size: " << tensor_size_ / 1000.0 << " KB, Time cost: " << t1.milliseconds() << " ms" << std::endl;
+            std::cout <<tensor_num_ << " " << tensor_size_ / 1000.0 << " " << t1.milliseconds() <<std::endl;
 #endif
 
             data_round = (data_round + 1) % 3;
-
             channels_[1]->push(tensor_size_);
             this->event_signal->push(1); //send signal to forward engine
         } while (true);
