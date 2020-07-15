@@ -97,7 +97,7 @@ void run_cluster_benchmark(int argc, char const *argv[])
     std::vector<std::string> ip_address;
     ip_address.push_back(local_ip);
     std::cout << "Local IP: " << local_ip << std::endl;
-    for (int index = 2; index < argc; index++)
+    for (int index = 1; index < argc; index++)
     {
         std::string ip = std::string(argv[index]);
         std::vector<std::string>::iterator it = std::find(ip_address.begin(), ip_address.end(), ip);
