@@ -172,7 +172,7 @@ void Aggregator::run()
                 std::cout << "too much tensor size: " << tensor_size_ << std::endl;
                 exit(-1);
             }
-            if (tensor_num_ > 15)
+            if (tensor_num_ > 16)
             {
                 std::cout << "too many tensor num: " << tensor_num_ << std::endl;
                 exit(-1);

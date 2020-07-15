@@ -36,14 +36,14 @@ int main(int argc, char const *argv[])
     aggregator_channels.push_back(data_channel_);
     aggregator_channels.push_back(control_channel_);
 
-    agg->setup(100 * 1000 * 1000, 15, threads); 
+    agg->setup(100 * 1000 * 1000, 16, threads); 
     agg->register_signal_event(signal_queue);
     agg->setup_channels(aggregator_channels);
     agg->run();
 
 //for (int i = 0; i != 12; i++)
 {
-    for (int num_tensor = 2; num_tensor <= 15; num_tensor++)
+    for (int num_tensor = 2; num_tensor <= 16; num_tensor++)
     {
         //for (int block_size = 1000; block_size <= 100000000; block_size *= 10) //
         int block_size = 10e6;
